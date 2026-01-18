@@ -28,11 +28,11 @@ def draw_bounding_boxes(image_file, detections):
     draw = ImageDraw.Draw(image)
     font = ImageFont.load_default()
 
-    for det in detections:
+    for det in detections:      
         label = det["label"]
         conf = round(det["confidence"], 2)
         x1, y1, x2, y2 = det.get("box", (det["x1"], det["y1"], det["x2"], det["y2"]))
-        draw.rectangle([x1, y1, x2, y2], outline="red", width=3)
-        draw.text((x1, y1 - 10), f"{label} ({conf})", fill="green", font=font)
+        draw.rectangle([x1, y1, x2, y2], outline="green", width=3)
+        draw.text((x1, y1 - 10), f"{label} ({conf})", fill="black", font=font)
 
     st.image(image, caption="Detected Objects", use_container_width=True)
