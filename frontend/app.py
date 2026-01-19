@@ -2,7 +2,6 @@ import streamlit as st
 import requests
 from speechtotext import speechtotext
 from texttospeech import speak
-from image_utils import draw_bounding_boxes, image_uploader_section
 from locate_image import locate_by_image
 from locate_video import locate_by_video
 import os

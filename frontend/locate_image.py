@@ -2,7 +2,7 @@ import streamlit as st
 import requests
 from speechtotext import speechtotext
 from texttospeech import speak
-from image_utils import draw_bounding_boxes, image_uploader_section
+from utils.image_utils import draw_bounding_boxes, image_uploader_section
 from user_intent_classify import get_user_intent
 
 BACKEND_IMAGE_DETECT_URL = "http://localhost:8000/detect"

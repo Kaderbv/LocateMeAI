@@ -3,15 +3,14 @@ import requests
 from speechtotext import speechtotext
 from texttospeech import speak
 from user_intent_classify import get_user_intent
-from video_utils import download_video
+from utils.video_utils import download_video, video_uploader_section
 
 BACKEND_VIDEO_DETECT_URL = "http://localhost:8000/detect-video"
 
 def locate_by_video():
     """Handle video detection functionality"""
     
-    st.subheader("🎥 Upload Video")
-    video_file = st.file_uploader("Upload a video for object detection", type=["mp4", "avi", "mov"], key="video_uploader")
+    video_file = video_uploader_section()
 
     st.subheader("🎤 Voice Command")
     st.write("Say things like: **'detect objects'**, **'start detection'**")

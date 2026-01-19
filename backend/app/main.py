@@ -42,7 +42,10 @@ async def detect_objects(file: UploadFile = File(...)):
         conf = float(box.conf[0])
         detections.append({ 
             "label": label, "confidence": conf, "x1": x1, "y1": y1, "x2": x2, "y2": y2  })
-
+    
+    # Cleanup uploaded file
+    os.remove(file_path)
+    
     return {"detections": detections}
 
 @app.post("/detect-video")
@@ -62,9 +65,15 @@ async def detect_video(file: UploadFile = File(...)):
     height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
     fps = int(cap.get(cv2.CAP_PROP_FPS))
     
-    # Video writer
-    fourcc = cv2.VideoWriter_fourcc(*'mp4v')
+    # Video writer - use H.264 codec for web compatibility
+    fourcc = cv2.VideoWriter_fourcc(*'avc1')  # H.264 codec
     out = cv2.VideoWriter(output_path, fourcc, fps, (width, height))
+    
+    # Check if video writer opened successfully
+    if not out.isOpened():
+        # Fallback to mp4v if avc1 fails
+        fourcc = cv2.VideoWriter_fourcc(*'mp4v')
+        out = cv2.VideoWriter(output_path, fourcc, fps, (width, height))
     
     frame_count = 0
     total_detections = []
@@ -100,6 +109,10 @@ async def detect_video(file: UploadFile = File(...)):
     cap.release()
     out.release()
     
+    # Verify output file was created
+    if not os.path.exists(output_path):
+        return {"error": "Failed to create output video"}
+    
     # Cleanup input file
     os.remove(input_path)
     
@@ -114,8 +127,15 @@ async def detect_video(file: UploadFile = File(...)):
 async def download_video(filename: str):
     """Download processed video"""
     file_path = f"{VIDEO_OUTPUT_DIR}/{filename}"
+    print(f"Looking for video at: {file_path}")
+    print(f"File exists: {os.path.exists(file_path)}")
+    
     if os.path.exists(file_path):
+        file_size = os.path.getsize(file_path)
+        print(f"File size: {file_size} bytes")
         return FileResponse(file_path, media_type="video/mp4", filename=filename)
+    
+    print(f"File not found: {file_path}")
     return {"error": "File not found"}
 
 @app.post("/classify-intent")
