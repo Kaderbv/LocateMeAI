@@ -1,6 +1,7 @@
 from fastapi import FastAPI, UploadFile, File
 from fastapi.responses import FileResponse
 from .yolo_model import YOLOModel
+from .intent_classifier import classify_intent
 import shutil
 import uuid
 import os
@@ -116,3 +117,9 @@ async def download_video(filename: str):
     if os.path.exists(file_path):
         return FileResponse(file_path, media_type="video/mp4", filename=filename)
     return {"error": "File not found"}
+
+@app.post("/classify-intent")
+async def classify_intent_endpoint(text: str):
+    """Classify user intent from text"""    
+    intent = classify_intent(text)
+    return {"intent": intent}

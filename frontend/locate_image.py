@@ -3,6 +3,7 @@ import requests
 from speechtotext import speechtotext
 from texttospeech import speak
 from image_utils import draw_bounding_boxes, image_uploader_section
+from user_intent_classify import get_user_intent
 
 BACKEND_IMAGE_DETECT_URL = "http://localhost:8000/detect"
 
@@ -17,7 +18,7 @@ def locate_by_image():
     # UI: Voice Interaction
     # -----------------------------
     st.subheader("🎤 Voice Command")
-    st.write("Say things like: **'detect objects'**, **'start detection'**, **'run YOLO'**")
+    st.write("Say things like: **'detect objects'**, **'start detection'**")
 
     if st.button("Start Voice Command for Image"):
         command_placeholder = st.empty()
@@ -25,7 +26,10 @@ def locate_by_image():
         command = speechtotext()
         command_placeholder.info(f"Recognized command: {command}")
 
-        if command and ("detect" in command or "start" in command or "yolo" in command):
+        classified_intent = get_user_intent(command)
+        st.write(f"Classified Intent: **{classified_intent}**")
+
+        if classified_intent == "object_detection":
             if not uploaded_file:
                 st.warning("Please upload an image first.")
                 speak("Please upload an image first.")
@@ -68,6 +72,6 @@ def locate_by_image():
                     speak("Backend error. Could not process the image.")
                     command_placeholder.empty()         
         else:
-            st.warning("Voice command not recognized.")
-            speak("Voice command not recognized.")
+            st.warning("General inquiry detected.")
+            speak("General inquiry detected.")
             command_placeholder.empty()
