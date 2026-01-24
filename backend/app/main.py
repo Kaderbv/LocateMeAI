@@ -1,21 +1,36 @@
-from fastapi import FastAPI, UploadFile, File
+from fastapi import FastAPI, UploadFile, File, Form
 from fastapi.responses import FileResponse
-from .yolo_model import YOLOModel
 from .intent_classifier import classify_intent
+from .utils import predict_extract_image_detections, predict_extract_video_detections
 import shutil
 import uuid
 import os
 import cv2
 from pathlib import Path
+from .ollma_llm import pull_model, query_llm
 
 app = FastAPI()
-yolo = YOLOModel()
+
 
 UPLOAD_DIR = "uploads"
 os.makedirs(UPLOAD_DIR, exist_ok=True)
 
 VIDEO_OUTPUT_DIR = "outputs"
 os.makedirs(VIDEO_OUTPUT_DIR, exist_ok=True)
+
+
+@app.on_event("startup")
+async def startup_event():
+    """Pull the llava model on startup (non-blocking)"""
+    try:
+        print("Checking Ollama model...")
+        # Run model pull in background - don't block startup
+        import asyncio
+        loop = asyncio.get_event_loop()
+        loop.run_in_executor(None, pull_model, "llava")
+        print("Model pull initiated in background")
+    except Exception as e:
+        print(f"Warning: Could not pull model: {e}")
 
 @app.get("/")
 async def root():
@@ -30,19 +45,9 @@ async def detect_objects(file: UploadFile = File(...)):
     with open(file_path, "wb") as buffer:
         shutil.copyfileobj(file.file, buffer)
 
-    # Run YOLO prediction
-    result = yolo.predict(file_path)
+    # Run prediction and extract detections
+    detections = predict_extract_image_detections(file_path)
 
-    # Extract detections
-    detections = []
-    for box in result.boxes:
-        x1, y1, x2, y2 = map(float, box.xyxy[0])
-        cls = int(box.cls[0])
-        label = result.names[cls]
-        conf = float(box.conf[0])
-        detections.append({ 
-            "label": label, "confidence": conf, "x1": x1, "y1": y1, "x2": x2, "y2": y2  })
-    
     # Cleanup uploaded file
     os.remove(file_path)
     
@@ -75,40 +80,9 @@ async def detect_video(file: UploadFile = File(...)):
         fourcc = cv2.VideoWriter_fourcc(*'mp4v')
         out = cv2.VideoWriter(output_path, fourcc, fps, (width, height))
     
-    frame_count = 0
-    total_detections = []
     
-    while cap.isOpened():
-        ret, frame = cap.read()
-        if not ret:
-            break
-        
-        # Run YOLO on frame
-        results = yolo.predict(frame)
-        
-        # Draw bounding boxes on frame
-        annotated_frame = results.plot()
-        
-        # Extract detections from this frame
-        for box in results.boxes:
-            x1, y1, x2, y2 = map(float, box.xyxy[0])
-            cls = int(box.cls[0])
-            label = results.names[cls]
-            conf = float(box.conf[0])
-            
-            if conf > 0.5:  # Only include high confidence detections
-                total_detections.append({
-                    "frame": frame_count,
-                    "label": label,
-                    "confidence": conf
-                })
-        
-        out.write(annotated_frame)
-        frame_count += 1
-    
-    cap.release()
-    out.release()
-    
+    total_detections, output_frame_count = predict_extract_video_detections(cap, out)
+
     # Verify output file was created
     if not os.path.exists(output_path):
         return {"error": "Failed to create output video"}
@@ -119,7 +93,7 @@ async def detect_video(file: UploadFile = File(...)):
     return {
         "message": "Video processed successfully",
         "output_file": f"{file_id}_output.mp4",
-        "total_frames": frame_count,
+        "total_frames": output_frame_count,
         "detections": total_detections
     }
 
@@ -143,3 +117,16 @@ async def classify_intent_endpoint(text: str):
     """Classify user intent from text"""    
     intent = classify_intent(text)
     return {"intent": intent}
+
+@app.post("/ask-general-query")
+async def general_query(
+    file: UploadFile = File(...),
+    question: str = Form(...),
+    isImage: str = Form(...),
+    ):
+    """Handle LLM queries for images and videos"""
+    # Convert string to boolean
+    is_image_bool = isImage.lower() in ('true', '1', 'yes')
+    
+    response = query_llm(await file.read(), question, isImage=is_image_bool)
+    return {"response": response}

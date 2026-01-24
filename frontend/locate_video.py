@@ -4,6 +4,7 @@ from speechtotext import speechtotext
 from texttospeech import speak
 from user_intent_classify import get_user_intent
 from utils.video_utils import download_video, video_uploader_section
+from general_inquiry import ask_general_query
 
 BACKEND_VIDEO_DETECT_URL = "http://localhost:8000/detect-video"
 
@@ -74,4 +75,6 @@ def locate_by_video():
         else:
             st.warning("General inquiry detected.")
             speak("General inquiry detected.")
+            response = ask_general_query(video_file.getvalue(), voiceCommand, isImage=False)
+            st.write(response)
             video_command_placeholder.empty()

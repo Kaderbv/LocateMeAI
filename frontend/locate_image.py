@@ -4,6 +4,7 @@ from speechtotext import speechtotext
 from texttospeech import speak
 from utils.image_utils import draw_bounding_boxes, image_uploader_section
 from user_intent_classify import get_user_intent
+from general_inquiry import ask_general_query
 
 BACKEND_IMAGE_DETECT_URL = "http://localhost:8000/detect"
 
@@ -74,4 +75,6 @@ def locate_by_image():
         else:
             st.warning("General inquiry detected.")
             speak("General inquiry detected.")
+            response = ask_general_query(uploaded_file.getvalue(), command, isImage=True)
+            st.write(response)
             command_placeholder.empty()
