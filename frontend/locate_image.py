@@ -31,6 +31,7 @@ def locate_by_image():
         st.write(f"Classified Intent: **{classified_intent}**")
 
         if classified_intent == "object_detection":
+            speak("Initiated object detection mode.")
             if not uploaded_file:
                 st.warning("Please upload an image first.")
                 speak("Please upload an image first.")
@@ -73,8 +74,8 @@ def locate_by_image():
                     speak("Backend error. Could not process the image.")
                     command_placeholder.empty()         
         else:
-            st.warning("General inquiry detected.")
-            speak("General inquiry detected.")
+            speak("General inquiry mode.")
             response = ask_general_query(uploaded_file.getvalue(), command, isImage=True)
+            speak(response)
             st.write(response)
             command_placeholder.empty()

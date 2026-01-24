@@ -26,6 +26,7 @@ def locate_by_video():
         st.write(f"Classified Intent: **{classified_intent}**")
 
         if classified_intent == "object_detection":
+            speak("Initiated object detection mode.")
             if not video_file:
                 st.warning("Please upload a video first.")
                 speak("Please upload a video first.")
@@ -73,8 +74,8 @@ def locate_by_video():
                     speak("Backend error. Could not process the video.")
                     video_command_placeholder.empty()
         else:
-            st.warning("General inquiry detected.")
-            speak("General inquiry detected.")
+            speak("General inquiry mode.")
             response = ask_general_query(video_file.getvalue(), voiceCommand, isImage=False)
+            speak(response)
             st.write(response)
             video_command_placeholder.empty()
