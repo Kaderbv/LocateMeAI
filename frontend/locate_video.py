@@ -6,6 +6,7 @@ from user_intent_classify import get_user_intent
 from utils.video_utils import download_video, video_uploader_section
 from general_inquiry import ask_general_query
 
+BACKEND_EXTRACT_CLASSES_URL = "http://localhost:8000/extract-classes"
 BACKEND_VIDEO_DETECT_URL = "http://localhost:8000/detect-video"
 
 def locate_by_video():
@@ -14,7 +15,7 @@ def locate_by_video():
     video_file = video_uploader_section()
 
     st.subheader("🎤 Voice Command")
-    st.write("Say things like: **'detect objects'**, **'start detection'**")
+    st.write("Say things like: **'detect cycle'**, **'find person and cat in this video'**")
 
     if st.button("Start Voice Command for Video"):
         video_command_placeholder = st.empty()
@@ -31,14 +32,38 @@ def locate_by_video():
                 st.warning("Please upload a video first.")
                 speak("Please upload a video first.")
             else:
-                # st.video(video_file)
+                info_placeholder = st.empty()
+                info_placeholder.info("Understanding your command...")
                 
+                try:
+                    classes_response = requests.post(
+                        BACKEND_EXTRACT_CLASSES_URL,
+                        data={"command": voiceCommand},
+                        timeout=15
+                    )
+                    classes = classes_response.json().get("classes", "")
+                    
+                    if classes:
+                        st.info(f"🎯 Detecting specific objects (classes: {classes})")
+                    else:
+                        st.info("🎯 Detecting all objects")
+                except Exception as e:
+                    st.warning(f"Could not extract classes, detecting all objects. Error: {e}")
+                    classes = ""
+
+                info_placeholder.info("Running detection...")
+
                 # call backend for video detection 
                 files = {"file": video_file.getvalue()}
+                data = {"classes": classes} if classes else {}
                 
                 with st.spinner("Processing video..."):
-                   video_detection_response = requests.post(BACKEND_VIDEO_DETECT_URL, files={"file": video_file})
-                   
+                   video_detection_response = requests.post(BACKEND_VIDEO_DETECT_URL,
+                                                            files={"file": video_file},
+                                                            data=data)
+                # Clear the info message after detection
+                info_placeholder.empty()
+
                 if video_detection_response.status_code == 200:
                     result = video_detection_response.json()
                     st.success("Video processed successfully!")
@@ -75,7 +100,10 @@ def locate_by_video():
                     video_command_placeholder.empty()
         else:
             speak("General inquiry mode.")
-            response = ask_general_query(video_file.getvalue(), voiceCommand, isImage=False)
+            
+            with st.spinner("Processing..."):
+                response = ask_general_query(video_file.getvalue(), voiceCommand, isImage=False)
+            
             speak(response)
             st.write(response)
             video_command_placeholder.empty()

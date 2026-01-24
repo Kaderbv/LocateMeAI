@@ -7,7 +7,7 @@ import uuid
 import os
 import cv2
 from pathlib import Path
-from .ollma_llm import pull_model, query_llm
+from .ollma_llm import pull_model, query_llm, extract_classes_from_command
 
 app = FastAPI()
 
@@ -37,7 +37,19 @@ async def root():
     return {"message": "YOLO Object Detection API is running."}
 
 @app.post("/detect")
-async def detect_objects(file: UploadFile = File(...)):
+async def detect_image(
+    file: UploadFile = File(...),
+    classes: str = Form(None)
+):
+    """Detect objects in image. Optionally filter by class IDs (comma-separated)."""
+    # Parse classes if provided
+    class_list = None
+    if classes:
+        try:
+            class_list = [int(c.strip()) for c in classes.split(',')]
+        except ValueError:
+            return {"error": "Invalid classes format. Use comma-separated integers (e.g., '0,2,16')"}
+    
     # Save uploaded file
     file_id = str(uuid.uuid4())
     file_path = f"{UPLOAD_DIR}/{file_id}.jpg"
@@ -46,7 +58,7 @@ async def detect_objects(file: UploadFile = File(...)):
         shutil.copyfileobj(file.file, buffer)
 
     # Run prediction and extract detections
-    detections = predict_extract_image_detections(file_path)
+    detections = predict_extract_image_detections(file_path, classes=class_list)
 
     # Cleanup uploaded file
     os.remove(file_path)
@@ -54,8 +66,19 @@ async def detect_objects(file: UploadFile = File(...)):
     return {"detections": detections}
 
 @app.post("/detect-video")
-async def detect_video(file: UploadFile = File(...)):
-    """Process video and return annotated video with detections"""
+async def detect_video(
+    file: UploadFile = File(...),
+    classes: str = Form(None)
+):
+    """Process video and return annotated video with detections. Optionally filter by class IDs."""
+    # Parse classes if provided
+    class_list = None
+    if classes:
+        try:
+            class_list = [int(c.strip()) for c in classes.split(',')]
+        except ValueError:
+            return {"error": "Invalid classes format. Use comma-separated integers (e.g., '0,2,16')"}
+    
     # Save uploaded video
     file_id = str(uuid.uuid4())
     input_path = f"{UPLOAD_DIR}/{file_id}_{file.filename}"
@@ -81,7 +104,7 @@ async def detect_video(file: UploadFile = File(...)):
         out = cv2.VideoWriter(output_path, fourcc, fps, (width, height))
     
     
-    total_detections, output_frame_count = predict_extract_video_detections(cap, out)
+    total_detections, output_frame_count = predict_extract_video_detections(cap, out, classes=class_list)
 
     # Verify output file was created
     if not os.path.exists(output_path):
@@ -117,6 +140,12 @@ async def classify_intent_endpoint(text: str):
     """Classify user intent from text"""    
     intent = classify_intent(text)
     return {"intent": intent}
+
+@app.post("/extract-classes")
+async def extract_classes_endpoint(command: str = Form(...)):
+    """Extract YOLO class IDs from natural language command using LLM"""
+    classes = extract_classes_from_command(command)
+    return {"classes": classes}
 
 @app.post("/ask-general-query")
 async def general_query(
