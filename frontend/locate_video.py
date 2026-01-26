@@ -41,10 +41,12 @@ def locate_by_video():
                         data={"command": voiceCommand},
                         timeout=15
                     )
-                    classes = classes_response.json().get("classes", "")
+                    response_data = classes_response.json()
+                    classes = response_data.get("class_ids", "")
+                    object_names = response_data.get("object_names", "")
                     
-                    if classes:
-                        st.info(f"🎯 Detecting specific objects (classes: {classes})")
+                    if classes and object_names:
+                        st.info(f"🎯 Detecting: {object_names} with (class IDs: {classes})")
                     else:
                         st.info("🎯 Detecting all objects")
                 except Exception as e:
@@ -75,15 +77,19 @@ def locate_by_video():
                         video_command_placeholder.empty()  
                         st.subheader("📊 Detection Summary")
                         
-                        # Count unique objects
-                        object_counts = {}
+                        # Group detections by object
+                        object_detections = {}
                         for det in video_detections:
                             label = det['label']
-                            object_counts[label] = object_counts.get(label, 0) + 1
+                            frame_id = det.get('frame_id', 'N/A')
+                            if label not in object_detections:
+                                object_detections[label] = []
+                            object_detections[label].append(frame_id)
                         
-                        # Display counts
-                        for obj, count in object_counts.items():
-                            st.write(f"- **{obj}**: detected {count} times")
+                        # Display counts and frame IDs
+                        for obj, frames in object_detections.items():
+                            st.write(f"- **{obj}**: detected {len(frames)} times (Frames: {', '.join(map(str, frames))})")
+                            speak(f"{obj} detected {len(frames)} times in the video.")
                         
                         # Fetch and display the processed video
                         output_file = result['output_file']                     

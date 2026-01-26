@@ -1,6 +1,5 @@
 import requests
-
-BACKEND_ASK_GENERAL_QUERY_URL = "http://localhost:8000/ask-general-query"
+from config import BACKEND_ASK_GENERAL_QUERY_URL
 
 def ask_general_query(content, question, isImage=True) -> str:
     """Use a language model to answer a general question about the image."""

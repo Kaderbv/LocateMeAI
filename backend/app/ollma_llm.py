@@ -5,11 +5,12 @@ import numpy as np
 import tempfile
 import os
 from .coco_classes import COCO_CLASSES
+from .config import OLLAMA_API_PULL_URL, OLLAMA_API_GENERATE_URL
 
 def pull_model(model_name: str):
     """Pull a model from Ollama. The API returns streaming responses."""
     response = requests.post(
-        "http://localhost:11434/api/pull",
+        OLLAMA_API_PULL_URL,
         json={"name": model_name},
         stream=True
     )
@@ -43,7 +44,7 @@ def _query_ollama_with_image(encoded_image: str, question: str) -> str:
     }
     
     response = requests.post(
-        "http://localhost:11434/api/generate",
+        OLLAMA_API_GENERATE_URL,
         json=payload
     )
     
@@ -97,10 +98,10 @@ def _query_ollama_with_video(video_content: bytes, question: str) -> str:
         if os.path.exists(tmp_path):
             os.remove(tmp_path)
 
-def extract_classes_from_command(command: str) -> str:
+def extract_classes_from_command(command: str) -> dict:
     """
     Use Ollama to extract object classes from natural language command.
-    Returns comma-separated class IDs or empty string if no specific objects mentioned.
+    Returns dict with class_ids (comma-separated string) and object_names (list).
     """
     try:
         # Prepare prompt for Ollama
@@ -131,7 +132,7 @@ Response:"""
         }
         
         response = requests.post(
-            "http://localhost:11434/api/generate",
+            OLLAMA_API_GENERATE_URL,
             json=payload,
             timeout=10
         )
@@ -143,24 +144,31 @@ Response:"""
         extracted_text = result.get("response", "").strip().lower()
         print(f"Extracted text from command: {extracted_text}")
 
-        # If "all" or empty, return empty string (means no filter)
+        # If "all" or empty, return empty (means no filter)
         if not extracted_text or "all" in extracted_text:
-            return ""
+            return {"class_ids": "", "object_names": []}
         
         # Parse extracted objects and map to class IDs
         object_names = [obj.strip() for obj in extracted_text.split(',')]
         class_ids = []
+        matched_objects = []
         
         for obj in object_names:
             if obj in COCO_CLASSES:
                 class_id = COCO_CLASSES[obj]
                 if class_id not in class_ids:
                     class_ids.append(class_id)
+                    matched_objects.append(obj)
         
         print(f"Extracted class_ids from command: {class_ids}")
-        # Return comma-separated class IDs
-        return ','.join(map(str, class_ids)) if class_ids else ""
+        print(f"Matched object names: {matched_objects}")
+        
+        # Return dict with both class IDs and object names
+        return {
+            "class_ids": ','.join(map(str, class_ids)) if class_ids else "",
+            "object_names": ','.join(matched_objects) if matched_objects else ""
+        }
         
     except Exception as e:
         print(f"Error extracting classes: {e}")
-        return ""  # Return empty string on error (no filter)
+        return {"class_ids": "", "object_names": ""}  # Return empty on error (no filter)

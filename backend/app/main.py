@@ -8,6 +8,9 @@ import os
 import cv2
 from pathlib import Path
 from .ollma_llm import pull_model, query_llm, extract_classes_from_command
+from .config import OLLAMA_MODEL_NAME
+# Load environment variables from .env file
+
 
 app = FastAPI()
 
@@ -27,7 +30,7 @@ async def startup_event():
         # Run model pull in background - don't block startup
         import asyncio
         loop = asyncio.get_event_loop()
-        loop.run_in_executor(None, pull_model, "llava")
+        loop.run_in_executor(None, pull_model, OLLAMA_MODEL_NAME)
         print("Model pull initiated in background")
     except Exception as e:
         print(f"Warning: Could not pull model: {e}")
@@ -144,8 +147,11 @@ async def classify_intent_endpoint(text: str):
 @app.post("/extract-classes")
 async def extract_classes_endpoint(command: str = Form(...)):
     """Extract YOLO class IDs from natural language command using LLM"""
-    classes = extract_classes_from_command(command)
-    return {"classes": classes}
+    result = extract_classes_from_command(command)
+    return {
+        "class_ids": result["class_ids"],
+        "object_names": result["object_names"]
+    }
 
 @app.post("/ask-general-query")
 async def general_query(

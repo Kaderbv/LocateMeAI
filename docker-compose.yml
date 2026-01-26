@@ -1,0 +1,58 @@
+version: '3.8'
+
+services:
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: locatemeai-backend
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./backend/uploads:/app/uploads
+      - ./backend/outputs:/app/outputs
+    environment:
+      - PYTHONUNBUFFERED=1
+    networks:
+      - locatemeai-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: locatemeai-frontend
+    ports:
+      - "8501:8501"
+    environment:
+      - PYTHONUNBUFFERED=1
+    networks:
+      - locatemeai-network
+    depends_on:
+      - backend
+    restart: unless-stopped
+
+  # Optional: Ollama service (if you want to include it in Docker)
+  # Uncomment if you want Ollama running in a container
+  # ollama:
+  #   image: ollama/ollama:latest
+  #   container_name: locatemeai-ollama
+  #   ports:
+  #     - "11434:11434"
+  #   volumes:
+  #     - ollama-data:/root/.ollama
+  #   networks:
+  #     - locatemeai-network
+  #   restart: unless-stopped
+
+networks:
+  locatemeai-network:
+    driver: bridge
+
+volumes:
+  ollama-data:

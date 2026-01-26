@@ -5,9 +5,7 @@ from texttospeech import speak
 from utils.image_utils import draw_bounding_boxes, image_uploader_section
 from user_intent_classify import get_user_intent
 from general_inquiry import ask_general_query
-
-BACKEND_EXTRACT_CLASSES_URL = "http://localhost:8000/extract-classes"
-BACKEND_IMAGE_DETECT_URL = "http://localhost:8000/detect"
+from config import BACKEND_IMAGE_DETECT_URL, BACKEND_EXTRACT_CLASSES_URL
 
 def locate_by_image():
     """Handle image detection functionality"""
@@ -47,10 +45,12 @@ def locate_by_image():
                         data={"command": command},
                         timeout=15
                     )
-                    classes = classes_response.json().get("classes", "")
+                    response_data = classes_response.json()
+                    classes = response_data.get("class_ids", "")
+                    object_names = response_data.get("object_names", "")
                     
-                    if classes:
-                        st.info(f"🎯 Detecting specific objects (classes: {classes})")
+                    if classes and object_names:
+                        st.info(f"🎯 Detecting: {object_names} (class IDs: {classes})")
                     else:
                         st.info("🎯 Detecting all objects")
                 except Exception as e:
@@ -88,9 +88,9 @@ def locate_by_image():
                             label = det["label"]
                             conf = round(det["confidence"], 2)
                             st.write(f"- **{label}** ({conf})")
-                            result_text += f"{label} with confidence {conf}. "
+                            result_text += f"{label} with confidence {conf} is found in the image."
 
-                        # speak(result_text)
+                        speak(result_text)
                         
                         # Draw bounding boxes on the image and display it
                         draw_bounding_boxes(uploaded_file, detections)

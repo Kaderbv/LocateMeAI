@@ -1,4 +1,5 @@
 from ultralytics import YOLO
+from .config import DEFAULT_YOLO_MODEL
 
 # Define a YOLOModel class to encapsulate model loading and prediction
 class YOLOModel:
@@ -12,9 +13,10 @@ class YOLOModel:
                     Common COCO classes:
                     0: person, 1: bicycle, 2: car, 3: motorcycle, 5: bus, 7: truck
                     15: bird, 16: cat, 17: dog, 24: backpack, 39: bottle, 41: cup
-        """
+        """      
         # Loads YOLOv8 pretrained on COCO dataset 
-        self.model = YOLO("yolov8n.pt")
+        model_path = DEFAULT_YOLO_MODEL
+        self.model = YOLO(model_path)
         self.classes = classes
 
     def predict(self, image_path: str):
