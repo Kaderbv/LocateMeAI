@@ -246,11 +246,259 @@ sudo ufw enable
 
 ## 13. Cost Optimization
 
-- Use Auto Scaling for variable load
-- Stop instances when not in use
-- Use Spot Instances for development
-- Monitor with AWS CloudWatch
-- Set up billing alerts
+### Automated Cost Optimization
+
+Run the cost optimization script:
+```bash
+chmod +x scripts/cost-optimization.sh
+sudo ./scripts/cost-optimization.sh
+```
+
+### Cost-Saving Strategies
+
+#### 1. Right-Sizing Instances
+**Current Recommendations**:
+- **Development/Testing**: t3.medium or t3a.medium Spot Instances (up to 90% savings)
+- **Production**: t3.large with Auto Scaling
+- **ML-Heavy Workloads**: Consider g4dn.xlarge with Spot for batch processing
+
+**Monthly Cost Comparison** (us-east-1 region):
+| Instance Type | On-Demand | 1-Year Reserved | Spot |
+|--------------|-----------|-----------------|------|
+| t3.medium    | $30.37    | $18.98 (37% off) | ~$9.11 (70% off) |
+| t3.large     | $60.74    | $37.96 (37% off) | ~$18.22 (70% off) |
+| g4dn.xlarge  | $394.62   | $236.77 (40% off) | ~$118.39 (70% off) |
+
+#### 2. Stop Instances When Not in Use
+```bash
+# Stop instance (keep EBS volumes, only pay for storage)
+aws ec2 stop-instances --instance-ids i-xxxxx
+
+# Start when needed
+aws ec2 start-instances --instance-ids i-xxxxx
+
+# Automate with Lambda function for scheduled start/stop
+```
+
+**Savings**: If running 8 hours/day, 5 days/week = **~70% cost reduction**
+
+#### 3. Use Spot Instances for Development
+```bash
+# Request Spot Instance
+aws ec2 request-spot-instances \
+    --spot-price "0.05" \
+    --instance-count 1 \
+    --type "one-time" \
+    --launch-specification file://specification.json
+
+# Set up Spot Instance with persistent storage
+# Attach EBS volume on instance startup
+```
+
+**Savings**: Up to **90% off On-Demand pricing**
+
+#### 4. Storage Optimization
+
+**EBS Volume Optimization**:
+```bash
+# Check volume usage
+df -h
+
+# Resize if needed (can only increase)
+aws ec2 modify-volume --volume-id vol-xxxxx --size 40
+
+# Switch to gp3 (cheaper than gp2)
+aws ec2 modify-volume --volume-id vol-xxxxx --volume-type gp3
+```
+
+**S3 for Media Storage**:
+```bash
+# Install AWS CLI
+sudo apt-get install awscli
+
+# Sync uploads to S3
+aws s3 sync ./backend/uploads s3://locatemeai-uploads/
+
+# Update backend to use S3
+# Modify backend/app/config.py to use boto3
+```
+
+**Storage Cost Comparison**:
+- EBS gp3: $0.08/GB/month
+- S3 Standard: $0.023/GB/month (65% cheaper)
+- S3 Intelligent-Tiering: Automatic cost optimization
+
+#### 5. Network Cost Optimization
+- Use VPC endpoints for AWS services (free)
+- Enable VPC Flow Logs only when debugging
+- Use CloudFront for static content delivery
+- Keep inter-service communication within same AZ
+
+#### 6. Monitoring Cost Management
+
+**Set Up Billing Alerts**:
+```bash
+# Create SNS topic for billing alerts
+aws sns create-topic --name billing-alerts
+
+# Subscribe email
+aws sns subscribe \
+    --topic-arn arn:aws:sns:us-east-1:ACCOUNT-ID:billing-alerts \
+    --protocol email \
+    --notification-endpoint your-email@example.com
+
+# Create billing alarm
+aws cloudwatch put-metric-alarm \
+    --alarm-name monthly-bill-exceeds-50 \
+    --alarm-description "Alert when bill exceeds $50" \
+    --metric-name EstimatedCharges \
+    --namespace AWS/Billing \
+    --statistic Maximum \
+    --period 21600 \
+    --evaluation-periods 1 \
+    --threshold 50 \
+    --comparison-operator GreaterThanThreshold \
+    --dimensions Name=Currency,Value=USD
+```
+
+**Use AWS Cost Explorer**:
+- Enable Cost Explorer in AWS Console
+- Set up daily cost reports
+- Create custom cost allocation tags
+- Use Reserved Instance recommendations
+
+#### 7. Container Image Optimization
+
+Reduce storage and data transfer costs:
+```dockerfile
+# Use multi-stage builds
+FROM python:3.11-slim as builder
+# Build steps...
+
+FROM python:3.11-slim
+# Only copy necessary files
+COPY --from=builder /app /app
+```
+
+```bash
+# Clean up Docker resources regularly
+docker system prune -af --volumes
+docker image prune -af --filter "until=48h"
+```
+
+#### 8. Auto Scaling Configuration
+
+Set up Auto Scaling to match demand:
+```bash
+# Create launch template
+aws ec2 create-launch-template \
+    --launch-template-name locatemeai-template \
+    --version-description "Version 1" \
+    --launch-template-data file://template-data.json
+
+# Create Auto Scaling group
+aws autoscaling create-auto-scaling-group \
+    --auto-scaling-group-name locatemeai-asg \
+    --launch-template LaunchTemplateName=locatemeai-template \
+    --min-size 1 \
+    --max-size 3 \
+    --desired-capacity 1 \
+    --target-group-arns arn:aws:elasticloadbalancing:... \
+    --health-check-type ELB \
+    --health-check-grace-period 300
+```
+
+#### 9. CloudWatch Optimization
+
+**Reduce CloudWatch Costs**:
+```bash
+# Use metric filters instead of detailed monitoring
+# Standard monitoring (5-min): Free
+# Detailed monitoring (1-min): $2.10/instance/month
+
+# Set shorter log retention
+aws logs put-retention-policy \
+    --log-group-name /locatemeai/application \
+    --retention-in-days 7  # Instead of default infinite
+```
+
+**CloudWatch Cost Breakdown**:
+- Metrics: $0.30/metric/month (first 10k free)
+- Logs: $0.50/GB ingested, $0.03/GB stored
+- Alarms: $0.10/alarm/month (first 10 free)
+
+**Recommendation**: Use Prometheus for detailed metrics, CloudWatch for critical alarms only.
+
+#### 10. Reserved Instances & Savings Plans
+
+For predictable workloads:
+
+**Reserved Instances**:
+- 1-year term: ~37% savings
+- 3-year term: ~60% savings
+- Payment options: All Upfront (highest discount), Partial, No Upfront
+
+**Compute Savings Plans**:
+- More flexible than RIs
+- 1-year: ~30% savings
+- 3-year: ~50% savings
+
+```bash
+# Check RI recommendations
+aws ce get-reservation-purchase-recommendation \
+    --service "Amazon EC2" \
+    --lookback-period-in-days THIRTY_DAYS
+```
+
+### Cost Monitoring Dashboard
+
+Monthly estimated costs for LocateMeAI:
+
+**Minimum Configuration** (t3.medium, development):
+- EC2: $30/month (On-Demand) or $9/month (Spot)
+- EBS: $8/month (100GB gp3)
+- Data Transfer: $5/month (modest usage)
+- **Total: ~$43/month or $22/month (Spot)**
+
+**Production Configuration** (t3.large, Auto Scaling):
+- EC2: $60/month (On-Demand) or $38/month (Reserved)
+- EBS: $12/month (150GB gp3)
+- ALB: $16.20/month
+- S3: $5/month (storage + requests)
+- CloudWatch: $10/month
+- Data Transfer: $15/month
+- **Total: ~$118/month or $96/month (Reserved)**
+
+**GPU Configuration** (g4dn.xlarge, ML workloads):
+- EC2: $395/month (On-Demand) or $237/month (Reserved) or $118/month (Spot)
+- **Recommendation**: Use Spot for batch processing
+
+### Quick Wins Checklist
+
+- [ ] Switch EBS from gp2 to gp3 (immediate 20% savings)
+- [ ] Set up auto-shutdown for development instances (70% savings)
+- [ ] Enable S3 lifecycle policies for old uploads
+- [ ] Set CloudWatch log retention to 7 days
+- [ ] Use Spot Instances for non-production
+- [ ] Set up billing alerts
+- [ ] Review and delete unused EBS snapshots
+- [ ] Enable AWS Compute Optimizer recommendations
+- [ ] Use t3a instances (AMD) for 10% additional savings
+- [ ] Compress Docker images
+
+### Monthly Cost Review Checklist
+
+Use this checklist for monthly cost reviews:
+- [ ] Review AWS Cost Explorer
+- [ ] Check for idle resources
+- [ ] Verify Auto Scaling effectiveness
+- [ ] Review CloudWatch log usage
+- [ ] Check for unattached EBS volumes
+- [ ] Review Reserved Instance utilization
+- [ ] Analyze data transfer patterns
+- [ ] Check for oversized instances
+- [ ] Review S3 storage classes
+- [ ] Update cost allocation tags
 
 ## 14. Backup Strategy
 

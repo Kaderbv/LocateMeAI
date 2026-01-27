@@ -1,0 +1,194 @@
+name: Deploy to EC2
+
+on:
+  push:
+    branches:
+      - main
+      - production
+  workflow_dispatch:
+
+env:
+  DOCKER_BUILDKIT: 1
+  COMPOSE_DOCKER_CLI_BUILD: 1
+
+jobs:
+  test:
+    name: Run Tests
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install backend dependencies
+        run: |
+          cd backend
+          pip install -r requirements.txt
+
+      - name: Install frontend dependencies
+        run: |
+          cd frontend
+          pip install -r requirements.txt
+
+      - name: Run backend linting
+        run: |
+          cd backend
+          pip install flake8
+          flake8 app/ --count --select=E9,F63,F7,F82 --show-source --statistics
+        continue-on-error: true
+
+  build:
+    name: Build Docker Images
+    runs-on: ubuntu-latest
+    needs: test
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build backend image
+        run: |
+          docker build -t locatemeai-backend:${{ github.sha }} ./backend
+
+      - name: Build frontend image
+        run: |
+          docker build -t locatemeai-frontend:${{ github.sha }} ./frontend
+
+      - name: Test backend container
+        run: |
+          docker run --rm -d --name test-backend -p 8000:8000 locatemeai-backend:${{ github.sha }}
+          sleep 10
+          curl -f http://localhost:8000/ || exit 1
+          docker stop test-backend
+
+  deploy:
+    name: Deploy to EC2
+    runs-on: ubuntu-latest
+    needs: build
+    if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/production'
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AWS_REGION }}
+
+      - name: Deploy to EC2
+        env:
+          EC2_HOST: ${{ secrets.EC2_HOST }}
+          EC2_USER: ${{ secrets.EC2_USER }}
+          EC2_KEY: ${{ secrets.EC2_SSH_KEY }}
+        run: |
+          # Save SSH key
+          echo "$EC2_KEY" > ec2_key.pem
+          chmod 600 ec2_key.pem
+          
+          # Deploy application
+          ssh -o StrictHostKeyChecking=no -i ec2_key.pem $EC2_USER@$EC2_HOST << 'EOF'
+            cd ~/LocateMeAI || exit 1
+            
+            # Pull latest code
+            git pull origin main
+            
+            # Stop existing containers
+            docker compose down
+            
+            # Remove old images
+            docker system prune -af --filter "until=24h"
+            
+            # Build and start containers
+            docker compose up -d --build
+            
+            # Wait for services to be healthy
+            sleep 15
+            
+            # Check health
+            docker compose ps
+            curl -f http://localhost:8000/ || echo "Backend health check failed"
+          EOF
+          
+          # Clean up
+          rm -f ec2_key.pem
+
+      - name: Verify Deployment
+        env:
+          EC2_HOST: ${{ secrets.EC2_HOST }}
+          EC2_USER: ${{ secrets.EC2_USER }}
+          EC2_KEY: ${{ secrets.EC2_SSH_KEY }}
+        run: |
+          echo "$EC2_KEY" > ec2_key.pem
+          chmod 600 ec2_key.pem
+          
+          ssh -o StrictHostKeyChecking=no -i ec2_key.pem $EC2_USER@$EC2_HOST << 'EOF'
+            cd ~/LocateMeAI
+            
+            echo "=== Container Status ==="
+            docker compose ps
+            
+            echo "=== Backend Logs (last 20 lines) ==="
+            docker compose logs --tail=20 backend
+            
+            echo "=== Frontend Logs (last 20 lines) ==="
+            docker compose logs --tail=20 frontend
+          EOF
+          
+          rm -f ec2_key.pem
+
+      - name: Send Slack Notification
+        if: always()
+        uses: slackapi/slack-github-action@v1.25.0
+        with:
+          webhook: ${{ secrets.SLACK_WEBHOOK_URL }}
+          payload: |
+            {
+              "text": "Deployment ${{ job.status }}: LocateMeAI to EC2",
+              "blocks": [
+                {
+                  "type": "section",
+                  "text": {
+                    "type": "mrkdwn",
+                    "text": "*Deployment Status:* ${{ job.status }}\n*Branch:* ${{ github.ref_name }}\n*Commit:* ${{ github.sha }}\n*Author:* ${{ github.actor }}"
+                  }
+                }
+              ]
+            }
+        continue-on-error: true
+
+  rollback:
+    name: Rollback on Failure
+    runs-on: ubuntu-latest
+    needs: deploy
+    if: failure()
+    steps:
+      - name: Rollback Deployment
+        env:
+          EC2_HOST: ${{ secrets.EC2_HOST }}
+          EC2_USER: ${{ secrets.EC2_USER }}
+          EC2_KEY: ${{ secrets.EC2_SSH_KEY }}
+        run: |
+          echo "$EC2_KEY" > ec2_key.pem
+          chmod 600 ec2_key.pem
+          
+          ssh -o StrictHostKeyChecking=no -i ec2_key.pem $EC2_USER@$EC2_HOST << 'EOF'
+            cd ~/LocateMeAI
+            
+            # Rollback to previous version
+            git reset --hard HEAD~1
+            docker compose down
+            docker compose up -d --build
+            
+            echo "Rolled back to previous version"
+          EOF
+          
+          rm -f ec2_key.pem
