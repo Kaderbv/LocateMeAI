@@ -81,7 +81,7 @@ def locate_by_video():
                         object_detections = {}
                         for det in video_detections:
                             label = det['label']
-                            frame_id = det.get('frame_id', 'N/A')
+                            frame_id = det.get('frame', 'N/A')
                             if label not in object_detections:
                                 object_detections[label] = []
                             object_detections[label].append(frame_id)

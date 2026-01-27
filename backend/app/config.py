@@ -1,8 +1,10 @@
 from dotenv import load_dotenv
 import os
 
-# Load environment variables from .env file
-load_dotenv()
+# Load environment variables
+# Priority: .env.local (local development) > .env (Docker) > defaults
+load_dotenv('.env.local')  # Load local development config first
+load_dotenv()  # Then load .env if exists (won't override existing vars)
 
 # Ollama configuration
 OLLAMA_HOST = os.getenv("OLLAMA_HOST", "http://localhost:11434")

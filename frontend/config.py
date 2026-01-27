@@ -3,7 +3,9 @@ import os
 from dotenv import load_dotenv
 
 # Load environment variables
-load_dotenv()
+# Priority: .env.local (local development) > .env (Docker) > defaults
+load_dotenv('.env.local')  # Load local development config first
+load_dotenv()  # Then load .env if exists (won't override existing vars)
 
 # Backend URL configuration
 BACKEND_URL = os.getenv("BACKEND_URL", "http://localhost:8000")
