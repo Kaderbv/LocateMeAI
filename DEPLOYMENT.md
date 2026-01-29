@@ -2,6 +2,8 @@
 
 This guide walks you through deploying the LocateMeAI application to an AWS EC2 instance using Docker.
 
+> **Note:** For automated CI/CD deployments using GitHub Actions, see [CI-CD-GUIDE.md](CI-CD-GUIDE.md).
+
 ## Prerequisites
 
 - AWS Account with EC2 access
@@ -27,6 +29,15 @@ This guide walks you through deploying the LocateMeAI application to an AWS EC2 
 
 ```bash
 ssh -i your-key.pem ubuntu@your-ec2-public-ip
+```
+
+or
+
+```config ssh host via VSCode
+Host your-ec2-public-ip
+  HostName your-ec2-public-ip
+  IdentityFile C:\Users\your-key.pem
+  User ubuntu
 ```
 
 ## 3. Install Docker and Docker Compose
@@ -72,7 +83,23 @@ curl http://localhost:11434/api/tags
 
 ## 5. Deploy Application
 
-### Option A: Deploy from Git Repository
+### Option A: Automated CI/CD Deployment (Recommended)
+
+For automated deployments with GitHub Actions:
+1. See [CI-CD-GUIDE.md](CI-CD-GUIDE.md) for complete setup instructions
+2. Configure GitHub Secrets (EC2 credentials, SSH keys)
+3. Push to `main` branch or trigger manual deployment from GitHub Actions UI
+4. Pipeline automatically runs tests, builds, and deploys to EC2
+
+Benefits:
+- Automated testing and building
+- Zero-downtime deployments
+- Automatic rollback on failures
+- Slack notifications (optional)
+
+For detailed CI/CD setup, troubleshooting, and best practices, refer to [CI-CD-GUIDE.md](CI-CD-GUIDE.md).
+
+### Option B: Deploy from Git Repository
 
 ```bash
 # Clone repository
@@ -86,7 +113,7 @@ docker compose up -d --build
 docker compose logs -f
 ```
 
-### Option B: Deploy from Local Files
+### Option C: Deploy from Local Files
 
 ```bash
 # From your local machine, copy files to EC2
@@ -158,6 +185,8 @@ sudo systemctl restart nginx
 
 ## 9. Management Commands
 
+### Manual Deployment
+
 ```bash
 # Start services
 docker compose up -d
@@ -180,6 +209,23 @@ docker compose up -d --build
 docker system prune -a
 ```
 
+### CI/CD Deployment
+
+For automated deployments:
+```bash
+# Deploy via GitHub Actions
+# 1. Push changes to main branch, or
+# 2. Trigger manual workflow from GitHub Actions UI
+
+# View deployment status
+# Check GitHub Actions tab in your repository
+
+# Rollback procedures
+# See CI-CD-GUIDE.md for automated and manual rollback options
+```
+
+For more details on CI/CD workflows, rollback procedures, and deployment verification, see [CI-CD-GUIDE.md](CI-CD-GUIDE.md).
+
 ## 10. Monitoring and Maintenance
 
 ```bash
@@ -197,6 +243,8 @@ docker compose restart backend
 ```
 
 ## 11. Troubleshooting
+
+> **CI/CD Troubleshooting:** For pipeline failures, deployment timeouts, and GitHub Actions issues, see the [Troubleshooting section in CI-CD-GUIDE.md](CI-CD-GUIDE.md#troubleshooting).
 
 ### Backend not starting
 ```bash
@@ -509,6 +557,12 @@ tar -czf backup-$(date +%Y%m%d).tar.gz backend/uploads backend/outputs
 # Copy to S3
 aws s3 cp backup-*.tar.gz s3://your-backup-bucket/
 ```
+
+## 15. Related Documentation
+
+- **[CI-CD-GUIDE.md](CI-CD-GUIDE.md)** - Complete CI/CD pipeline setup, automated deployments, rollback procedures
+- **[README.md](README.md)** - Project overview and local development setup
+- **[docker-compose.yml](docker-compose.yml)** - Service configuration and orchestration
 
 ## Support
 

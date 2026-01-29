@@ -46,17 +46,23 @@ Use **Repository secrets** if you have a single deployment environment (e.g., on
 
 Click **New repository secret** and add:
 
+**Required Secrets:**
 ```
-AWS_ACCESS_KEY_ID          # AWS IAM user access key
-AWS_SECRET_ACCESS_KEY      # AWS IAM user secret key
-AWS_REGION                 # e.g., us-east-1
-
 EC2_HOST                   # EC2 instance public IP or hostname
 EC2_USER                   # SSH user (usually 'ubuntu')
 EC2_SSH_KEY                # Private SSH key content (entire .pem file)
+```
+
+**Optional Secrets:**
+```
+AWS_ACCESS_KEY_ID          # (Optional) AWS IAM user access key
+AWS_SECRET_ACCESS_KEY      # (Optional) AWS IAM user secret key
+AWS_REGION                 # (Optional) e.g., us-east-1
 
 SLACK_WEBHOOK_URL          # (Optional) Slack webhook for notifications
 ```
+
+> **Note:** AWS credentials are only needed if you plan to use AWS CLI commands in your workflow (e.g., starting/stopping EC2 instances, S3 operations, or CloudWatch logging). The basic deployment workflow uses SSH only and doesn't require AWS credentials.
 
 #### Option B: Environment Secrets (For Multiple Environments)
 
@@ -89,9 +95,11 @@ deploy:
 
 **Recommendation:** Start with **Repository secrets** for simplicity. Move to Environment secrets when you need multiple deployment targets.
 
-### 2. Create AWS IAM User
+### 2. Create AWS IAM User (Optional)
 
-Create an IAM user with these permissions:
+> **Note:** This step is only required if you plan to use AWS CLI commands in your workflow for instance management or other AWS operations. The basic SSH-based deployment doesn't require AWS credentials.
+
+If you need AWS API access, create an IAM user with these permissions:
 ```json
 {
   "Version": "2012-10-17",
@@ -108,6 +116,13 @@ Create an IAM user with these permissions:
   ]
 }
 ```
+
+**Common use cases for AWS credentials:**
+- Automatically starting/stopping EC2 instances to save costs
+- Uploading artifacts to S3
+- Sending logs to CloudWatch
+- Managing Auto Scaling groups
+- Updating Route53 DNS records
 
 ### 3. Configure EC2 Instance
 
@@ -143,11 +158,19 @@ cat ~/.ssh/id_ed25519.pub
 
 ### Deploy from Local Machine
 
+**Prerequisites:**
+- Your EC2 SSH private key (`.pem` file) downloaded from AWS
+- Key stored securely on your local machine (e.g., `~/.ssh/your-key.pem`)
+
+**On Linux/Mac:**
 ```bash
+# Set proper permissions on your SSH key (required)
+chmod 600 ~/.ssh/your-key.pem
+
 # Set environment variables
 export EC2_HOST="your-ec2-ip"
 export EC2_USER="ubuntu"
-export EC2_KEY_PATH="path/to/your-key.pem"
+export EC2_KEY_PATH="~/.ssh/your-key.pem"  # Path to your local SSH key
 
 # Deploy
 ssh -i $EC2_KEY_PATH $EC2_USER@$EC2_HOST << 'EOF'
@@ -157,6 +180,19 @@ ssh -i $EC2_KEY_PATH $EC2_USER@$EC2_HOST << 'EOF'
   docker compose up -d --build
 EOF
 ```
+
+**On Windows (PowerShell):**
+```powershell
+# Set environment variables
+$env:EC2_HOST = "your-ec2-ip"
+$env:EC2_USER = "ubuntu"
+$env:EC2_KEY_PATH = "C:\Users\YourUsername\.ssh\your-key.pem"  # Path to your local SSH key
+
+# Deploy using ssh
+ssh -i $env:EC2_KEY_PATH $env:EC2_USER@$env:EC2_HOST "cd ~/LocateMeAI && git pull origin main && docker compose down && docker compose up -d --build"
+```
+
+> **Note:** `EC2_KEY_PATH` is the local file path on your computer where you saved the SSH key downloaded from AWS. This is different from `EC2_SSH_KEY` secret in GitHub Actions, which contains the key content itself.
 
 ### Deploy Using GitHub Actions UI
 
