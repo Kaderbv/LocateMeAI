@@ -94,17 +94,18 @@ jobs:
           EC2_HOST: ${{ secrets.EC2_HOST }}
           EC2_USER: ${{ secrets.EC2_USER }}
           EC2_KEY: ${{ secrets.EC2_SSH_KEY }}
+          GITHUB_TOKEN: ${{ secrets.PAT_TOKEN }}
         run: |
           # Save SSH key
           echo "$EC2_KEY" > ec2_key.pem
           chmod 600 ec2_key.pem
           
           # Deploy application
-          ssh -o StrictHostKeyChecking=no -i ec2_key.pem $EC2_USER@$EC2_HOST << 'EOF'
+          ssh -o StrictHostKeyChecking=no -i ec2_key.pem $EC2_USER@$EC2_HOST << EOF
             # Clone repository if it doesn't exist
             if [ ! -d ~/LocateMeAI ]; then
               echo "Repository not found. Cloning..."
-              git clone https://github.com/Kaderbv/LocateMeAI.git ~/LocateMeAI
+              git clone https://\$GITHUB_TOKEN@github.com/Kaderbv/LocateMeAI.git ~/LocateMeAI
             fi
             
             cd ~/LocateMeAI || exit 1
