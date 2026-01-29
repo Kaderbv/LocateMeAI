@@ -101,11 +101,11 @@ jobs:
           chmod 600 ec2_key.pem
           
           # Deploy application
-          ssh -o StrictHostKeyChecking=no -i ec2_key.pem $EC2_USER@$EC2_HOST "bash -s" << EOF
+          ssh -o StrictHostKeyChecking=no -i ec2_key.pem $EC2_USER@$EC2_HOST "export GITHUB_TOKEN='$GITHUB_TOKEN' && bash -s" << 'EOF'
             # Clone repository if it doesn't exist
             if [ ! -d ~/LocateMeAI ]; then
               echo "Repository not found. Cloning..."
-              git clone https://${GITHUB_TOKEN}@github.com/Kaderbv/LocateMeAI.git ~/LocateMeAI
+              git clone https://$GITHUB_TOKEN@github.com/Kaderbv/LocateMeAI.git ~/LocateMeAI
             fi
             
             cd ~/LocateMeAI || exit 1
@@ -167,8 +167,8 @@ jobs:
         with:
           server_address: smtp.gmail.com
           server_port: 465
-          username: ${{ secrets.EMAIL_USERNAME }}
-          password: ${{ secrets.EMAIL_PASSWORD }}
+          username: ${{ secrets.EMAIL_USERNAME }} // Your email address(your-email@gmail.com)
+          password: ${{ secrets.EMAIL_PASSWORD }} // Use app password if 2FA is enabled
           subject: "Deployment ${{ job.status }}: LocateMeAI to EC2"
           to: ${{ secrets.EMAIL_TO }}
           from: GitHub Actions
