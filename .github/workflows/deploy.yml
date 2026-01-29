@@ -101,11 +101,11 @@ jobs:
           chmod 600 ec2_key.pem
           
           # Deploy application
-          ssh -o StrictHostKeyChecking=no -i ec2_key.pem $EC2_USER@$EC2_HOST << EOF
+          ssh -o StrictHostKeyChecking=no -i ec2_key.pem $EC2_USER@$EC2_HOST "bash -s" << EOF
             # Clone repository if it doesn't exist
             if [ ! -d ~/LocateMeAI ]; then
               echo "Repository not found. Cloning..."
-              git clone https://\$GITHUB_TOKEN@github.com/Kaderbv/LocateMeAI.git ~/LocateMeAI
+              git clone https://${GITHUB_TOKEN}@github.com/Kaderbv/LocateMeAI.git ~/LocateMeAI
             fi
             
             cd ~/LocateMeAI || exit 1
@@ -128,6 +128,10 @@ jobs:
             # Check health
             docker compose ps
             curl -f http://localhost:8000/ || echo "Backend health check failed"
+          EOF
+          
+          # Clean up
+          rm -f ec2_key.pem
           EOF
           
           # Clean up
