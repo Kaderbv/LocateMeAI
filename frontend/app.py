@@ -38,8 +38,8 @@ st.markdown("""
 # UI: Page Header and Logo
 # -----------------------------
 
-# Display logo if available (assets folder is in project root)
-logo_path = os.path.join(os.path.dirname(__file__), "..", "assets", "logo.png")
+# Display logo if available (assets folder is in frontend directory)
+logo_path = os.path.join(os.path.dirname(__file__), "assets", "logo.png")
 if os.path.exists(logo_path):
     col1, col2, col3 = st.columns([1, 2, 1])
     with col2:
