@@ -47,6 +47,9 @@ Host your-ec2-public-ip
 sudo apt-get update
 sudo apt-get upgrade -y
 
+# Install system dependencies for Python packages
+sudo apt-get install -y portaudio19-dev python3-pyaudio
+
 # Install Docker
 sudo apt-get install -y ca-certificates curl gnupg lsb-release
 sudo mkdir -p /etc/apt/keyrings
