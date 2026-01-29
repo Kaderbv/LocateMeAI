@@ -94,18 +94,20 @@ jobs:
           EC2_HOST: ${{ secrets.EC2_HOST }}
           EC2_USER: ${{ secrets.EC2_USER }}
           EC2_KEY: ${{ secrets.EC2_SSH_KEY }}
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           # Save SSH key
           echo "$EC2_KEY" > ec2_key.pem
           chmod 600 ec2_key.pem
           
           # Deploy application
-          ssh -o StrictHostKeyChecking=no -i ec2_key.pem $EC2_USER@$EC2_HOST "export GITHUB_TOKEN='$GITHUB_TOKEN' && bash -s" << 'EOF'
+          ssh -o StrictHostKeyChecking=no -i ec2_key.pem $EC2_USER@$EC2_HOST << 'EOF'
             # Clone repository if it doesn't exist
             if [ ! -d ~/LocateMeAI ]; then
               echo "Repository not found. Cloning..."
-              git clone https://$GITHUB_TOKEN@github.com/Kaderbv/LocateMeAI.git ~/LocateMeAI
+              # Add GitHub to known hosts
+              ssh-keyscan github.com >> ~/.ssh/known_hosts 2>/dev/null
+              # Clone using SSH (for private repos)
+              git clone git@github.com:Kaderbv/LocateMeAI.git ~/LocateMeAI
             fi
             
             cd ~/LocateMeAI || exit 1
@@ -128,10 +130,6 @@ jobs:
             # Check health
             docker compose ps
             curl -f http://localhost:8000/ || echo "Backend health check failed"
-          EOF
-          
-          # Clean up
-          rm -f ec2_key.pem
           EOF
           
           # Clean up
@@ -167,8 +165,8 @@ jobs:
         with:
           server_address: smtp.gmail.com
           server_port: 465
-          username: ${{ secrets.EMAIL_USERNAME }} // Your email address(your-email@gmail.com)
-          password: ${{ secrets.EMAIL_PASSWORD }} // Use app password if 2FA is enabled
+          username: ${{ secrets.EMAIL_USERNAME }}
+          password: ${{ secrets.EMAIL_PASSWORD }}
           subject: "Deployment ${{ job.status }}: LocateMeAI to EC2"
           to: ${{ secrets.EMAIL_TO }}
           from: GitHub Actions
