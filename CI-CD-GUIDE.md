@@ -129,30 +129,85 @@ If you need AWS API access, create an IAM user with these permissions:
 On your EC2 instance:
 
 ```bash
-# Clone the repository
-cd ~
-git clone https://github.com/Kaderbv/LocateMeAI.git
-cd LocateMeAI
+# SSH to your EC2 instance
+ssh -i your-key.pem ubuntu@your-ec2-ip
 
 # Add GitHub to known hosts
 ssh-keyscan github.com >> ~/.ssh/known_hosts
 
-# Initial deployment
+# Initial deployment (for public repos)
+cd ~
+git clone https://github.com/Kaderbv/LocateMeAI.git
+cd LocateMeAI
 docker compose up -d --build
 ```
 
-### 4. Set Up Deploy Keys (Optional)
+### 4. Set Up Deploy Keys for Private Repositories (Required for Private Repos)
 
-For private repositories:
+> **Important:** If your repository is private, you MUST set up a GitHub deploy key before the CI/CD pipeline can clone the repository on EC2.
+
+**Step 1: Generate SSH Key on EC2**
 
 ```bash
-# On EC2 instance
-ssh-keygen -t ed25519 -C "ec2-deploy-key"
+# SSH to your EC2 instance
+ssh -i your-key.pem ubuntu@your-ec2-ip
 
-# Add the public key to GitHub
-cat ~/.ssh/id_ed25519.pub
-# GitHub → Repository → Settings → Deploy keys → Add deploy key
+# Generate SSH key for GitHub
+ssh-keygen -t ed25519 -C "ec2-deploy-key" -f ~/.ssh/github_deploy_key -N ""
+
+# Display the public key
+cat ~/.ssh/github_deploy_key.pub
 ```
+
+**Step 2: Add Deploy Key to GitHub**
+
+1. Copy the public key output from the previous command
+2. Go to your repository on GitHub: https://github.com/Kaderbv/LocateMeAI/settings/keys
+3. Click **"Add deploy key"**
+4. **Title:** `EC2 Deployment Key`
+5. **Key:** Paste the public key
+6. ✅ **Check "Allow write access"** (required for pulling updates)
+7. Click **"Add key"**
+
+**Step 3: Configure SSH to Use the Deploy Key**
+
+```bash
+# On EC2 instance, create/edit SSH config
+cat >> ~/.ssh/config << 'EOF'
+Host github.com
+    HostName github.com
+    User git
+    IdentityFile ~/.ssh/github_deploy_key
+    StrictHostKeyChecking no
+EOF
+
+chmod 600 ~/.ssh/config
+
+# Test the connection
+ssh -T git@github.com
+```
+
+**Expected Output:**
+```
+Hi Kaderbv/LocateMeAI! You've successfully authenticated, but GitHub does not provide shell access.
+```
+
+This message confirms authentication is working correctly. The workflow will now be able to clone and pull from your private repository.
+
+**Step 4: Clone Repository Using SSH (for private repos)**
+
+```bash
+# Clone using SSH URL
+cd ~
+git clone git@github.com:Kaderbv/LocateMeAI.git
+cd LocateMeAI
+docker compose up -d --build
+```
+
+**Troubleshooting:**
+- If `ssh -T git@github.com` fails, check that the public key was added correctly to GitHub
+- Ensure "Allow write access" is checked on the deploy key
+- Verify the SSH key file has correct permissions: `chmod 600 ~/.ssh/github_deploy_key`
 
 ## Manual Deployment
 
