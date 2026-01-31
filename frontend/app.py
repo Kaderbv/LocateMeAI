@@ -4,49 +4,30 @@ from speechtotext import speechtotext
 from texttospeech import speak
 from locate_image import locate_by_image
 from locate_video import locate_by_video
+from styles import get_custom_css
 import os
 
-st.set_page_config(page_title="LocateMe Voice-Assisted AI", layout="centered")
+st.set_page_config(page_title="LocateMe Voice-Assisted AI", layout="wide")
 
-# Custom CSS for background color
-st.markdown("""
-    <style>
-    .stApp {
-        background-color: #D3D3D3 !important;
-    }
-    /* Style for tabs */
-    .stTabs [data-baseweb="tab-list"] {
-        gap: 8px;
-    }
-    .stTabs [data-baseweb="tab"] {
-        background-color: #404040 !important;
-        color: white;
-        font-weight: bold;
-        border-radius: 5px;
-        padding: 10px 20px;
-    }
-    .stTabs [aria-selected="true"] {
-        background-color: #1A1A1A !important;
-    }
-    .st-c1 {
-            background-color: #D3D3D3 !important;
-    }
-    </style>
-    """, unsafe_allow_html=True)
+# Apply custom CSS
+st.markdown(get_custom_css(), unsafe_allow_html=True)
 
 # -----------------------------
 # UI: Page Header and Logo
 # -----------------------------
 
-# Display logo if available (assets folder is in frontend directory)
+# Display logo on the left with title and caption on the right
 logo_path = os.path.join(os.path.dirname(__file__), "assets", "logo.png")
 if os.path.exists(logo_path):
-    col1, col2, col3 = st.columns([1, 2, 1])
+    col1, col2, col3, col4 = st.columns([1.5, 6,0.8, 1.5])
+    with col1:
+        st.image(logo_path, width=150)
     with col2:
-        st.image(logo_path, width=200)
-
-st.title("🎤 Voice-Assisted Object Locater")
-st.caption("Upload an image/video and use voice commands to detect objects.")
+        st.title("Voice-Assisted Object Locater")
+        st.caption("Upload an image/video and use voice commands to detect objects.")
+else:
+    st.title("🎤 Voice-Assisted Object Locater")
+    st.caption("Upload an image/video and use voice commands to detect objects.")
 
 # -----------------------------
 # UI: Menu Tabs
