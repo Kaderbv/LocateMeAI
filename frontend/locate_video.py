@@ -14,102 +14,126 @@ def locate_by_video():
     
     video_file = video_uploader_section()
 
-    st.subheader("🎤 Voice Command")
+    st.subheader("🎤 Voice Command for Video")
     st.write("Say things like: **'detect cycle'**, **'find person and cat in this video'**")
 
-    if st.button("Start Voice Command for Video"):
-        video_command_placeholder = st.empty()
-        video_command_placeholder.info("Listening for your command...")
-        voiceCommand = speechtotext()
-        video_command_placeholder.info(f"Recognized command: {voiceCommand}")
+    # Streamlit audio input widget (works in Docker/browser)
+    audio_data_for_locate_video = st.audio_input("🎥 Record your voice command for video", key="video_audio_input")
+    
+    # Initialize session state for tracking processed audio
+    if 'last_video_audio' not in st.session_state:
+        st.session_state.last_video_audio = None
+    
+    if audio_data_for_locate_video is not None:
+        # Only process if this is new audio (not already processed)
+        audio_bytes_for_locate_video = audio_data_for_locate_video.read()
+        audio_hash = hash(audio_bytes_for_locate_video)
+        
+        if st.session_state.last_video_audio != audio_hash:
+            st.session_state.last_video_audio = audio_hash
+            
+            # Process the audio
+            video_command_placeholder = st.empty()
+            video_command_placeholder.info("Processing your audio...")
+            
+            voiceCommand = speechtotext(audio_bytes_for_locate_video)
+            
+            if voiceCommand:
+                video_command_placeholder.info(f"Recognized command: {voiceCommand}")
 
-        classified_intent = get_user_intent(voiceCommand)
-        st.write(f"Classified Intent: **{classified_intent}**")
+                classified_intent = get_user_intent(voiceCommand)
+                st.write(f"Classified Intent: **{classified_intent}**")
 
-        if classified_intent == "object_detection":
-            speak("Initiated object detection mode.")
-            if not video_file:
-                st.warning("Please upload a video first.")
-                speak("Please upload a video first.")
-            else:
-                info_placeholder = st.empty()
-                info_placeholder.info("Understanding your command...")
-                
-                try:
-                    classes_response = requests.post(
-                        BACKEND_EXTRACT_CLASSES_URL,
-                        data={"command": voiceCommand},
-                        timeout=15
-                    )
-                    response_data = classes_response.json()
-                    classes = response_data.get("class_ids", "")
-                    object_names = response_data.get("object_names", "")
-                    
-                    if classes and object_names:
-                        st.info(f"🎯 Detecting: {object_names} with (class IDs: {classes})")
+                if classified_intent == "object_detection":
+                    speak("Initiated object detection mode.")
+                    if not video_file:
+                        st.warning("Please upload a video first.")
+                        speak("Please upload a video first.")
                     else:
-                        st.info("🎯 Detecting all objects")
-                except Exception as e:
-                    st.warning(f"Could not extract classes, detecting all objects. Error: {e}")
-                    classes = ""
-
-                info_placeholder.info("Running detection...")
-
-                # call backend for video detection 
-                files = {"file": video_file.getvalue()}
-                data = {"classes": classes} if classes else {}
-                
-                with st.spinner("Processing video..."):
-                   video_detection_response = requests.post(BACKEND_VIDEO_DETECT_URL,
-                                                            files={"file": video_file},
-                                                            data=data)
-                # Clear the info message after detection
-                info_placeholder.empty()
-
-                if video_detection_response.status_code == 200:
-                    result = video_detection_response.json()
-                    st.success("Video processed successfully!")
-                    st.info(f"Total frames processed: {result['total_frames']}")
+                        info_placeholder = st.empty()
+                        info_placeholder.info("Understanding your command...")
                     
-                    # Show detection statistics
-                    video_detections = result.get('detections', [])
-                    if video_detections:
-                        video_command_placeholder.empty()  
-                        st.subheader("📊 Detection Summary")
+                    try:
+                        classes_response = requests.post(
+                            BACKEND_EXTRACT_CLASSES_URL,
+                            data={"command": voiceCommand},
+                            timeout=60
+                        )
+
+                        response_data = classes_response.json()
+                        classes = response_data.get("class_ids", "")
+                        object_names = response_data.get("object_names", "")
                         
-                        # Group detections by object
-                        object_detections = {}
-                        for det in video_detections:
-                            label = det['label']
-                            frame_id = det.get('frame', 'N/A')
-                            if label not in object_detections:
-                                object_detections[label] = []
-                            object_detections[label].append(frame_id)
+                        if classes and object_names:
+                            st.info(f"🎯 Detecting: {object_names} with (class IDs: {classes})")
+                        else:
+                            st.info("🎯 Detecting all objects")
+                    except Exception as e:
+                        st.warning(f"Could not extract classes, detecting all objects. Error: {e}")
+                        classes = ""
+
+                    info_placeholder.info("Running detection...")
+
+                    # call backend for video detection 
+                    files = {"file": video_file.getvalue()}
+                    data = {"classes": classes} if classes else {}
+                    
+                    with st.spinner("Processing video..."):
+                       video_detection_response = requests.post(
+                            BACKEND_VIDEO_DETECT_URL,
+                            files={"file": video_file},
+                            data=data,
+                            timeout=60)
+                       
+                    # Clear the info message after detection
+                    info_placeholder.empty()
+
+                    if video_detection_response.status_code == 200:
+                        result = video_detection_response.json()
+                        st.success("Video processed successfully!")
+                        st.info(f"Total frames processed: {result['total_frames']}")
                         
-                        # Display counts and frame IDs
-                        for obj, frames in object_detections.items():
-                            st.write(f"- **{obj}**: detected {len(frames)} times (Frames: {', '.join(map(str, frames))})")
-                            speak(f"{obj} detected {len(frames)} times in the video.")
-                        
-                        # Fetch and display the processed video
-                        output_file = result['output_file']                     
-                        
-                        # Call the download_video function to fetch and display the video
-                        download_video(output_file)
+                        # Show detection statistics
+                        video_detections = result.get('detections', [])
+                        if video_detections:
+                            video_command_placeholder.empty()  
+                            st.subheader("📊 Detection Summary")
+                            
+                            # Group detections by object
+                            object_detections = {}
+                            for det in video_detections:
+                                label = det['label']
+                                frame_id = det.get('frame', 'N/A')
+                                if label not in object_detections:
+                                    object_detections[label] = []
+                                object_detections[label].append(frame_id)
+                            
+                            # Display counts and frame IDs
+                            for obj, frames in object_detections.items():
+                                st.write(f"- **{obj}**: detected {len(frames)} times.")
+                                speak(f"{obj} detected {len(frames)} times in the video.")
+                            
+                            # Fetch and display the processed video
+                            output_file = result['output_file']                     
+                            
+                            # Call the download_video function to fetch and display the video
+                            download_video(output_file)
+                        else:
+                            st.warning("No objects detected in the video.")
+                            speak("No objects detected in the video.")                           
+                    
                     else:
-                        st.warning("No objects detected in the video.")
-                        speak("No objects detected in the video.")                           
-                
+                        st.error("Backend error. Could not process the video.")
+                        speak("Backend error. Could not process the video.")
+                        video_command_placeholder.empty()
                 else:
-                    st.error("Backend error. Could not process the video.")
-                    speak("Backend error. Could not process the video.")
+                    speak("General inquiry mode.")
+                    
+                    with st.spinner("Processing..."):
+                        response = ask_general_query(video_file.getvalue(), voiceCommand, isImage=False)
+                    
+                    speak(response)
+                    st.write(response)
                     video_command_placeholder.empty()
-        else:
-            speak("General inquiry mode.")
-            
-            with st.spinner("Processing..."):
-                response = ask_general_query(video_file.getvalue(), voiceCommand, isImage=False)
-            
-            speak(response)
-            st.write(response)
-            video_command_placeholder.empty()
+            else:
+                video_command_placeholder.warning("Could not recognize your voice command. Please try again.")

@@ -45,7 +45,8 @@ def _query_ollama_with_image(encoded_image: str, question: str) -> str:
     
     response = requests.post(
         OLLAMA_API_GENERATE_URL,
-        json=payload
+        json=payload,
+        timeout=120
     )
     
     if response.status_code == 200:
@@ -134,7 +135,7 @@ Response:"""
         response = requests.post(
             OLLAMA_API_GENERATE_URL,
             json=payload,
-            timeout=10
+            timeout=120
         )
         
         if response.status_code != 200:

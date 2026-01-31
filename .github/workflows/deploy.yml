@@ -90,6 +90,7 @@ jobs:
       #     aws-region: ${{ secrets.AWS_REGION }}
 
       - name: Deploy to EC2
+        timeout-minutes: 30
         env:
           EC2_HOST: ${{ secrets.EC2_HOST }}
           EC2_USER: ${{ secrets.EC2_USER }}
@@ -127,7 +128,16 @@ jobs:
             docker system prune -af --filter "until=24h" > /dev/null 2>&1
             
             # Build and start containers (with progress plain to reduce output)
-            BUILDKIT_PROGRESS=plain docker compose up -d --build 2>&1 | tail -n 50
+            echo "Building and starting containers..."
+            if BUILDKIT_PROGRESS=plain docker compose up -d --build 2>&1 | tail -n 50; then
+              echo "Containers started successfully"
+            else
+              echo "Build failed, attempting to start with existing images..."
+              docker compose up -d || {
+                echo "Failed to start containers"
+                exit 1
+              }
+            fi
             
             # Wait for services to be healthy
             sleep 15
@@ -138,6 +148,37 @@ jobs:
           EOF
           
           # Clean up
+          rm -f ec2_key.pem
+
+      - name: Ensure Services Running
+        if: always()
+        env:
+          EC2_HOST: ${{ secrets.EC2_HOST }}
+          EC2_USER: ${{ secrets.EC2_USER }}
+          EC2_KEY: ${{ secrets.EC2_SSH_KEY }}
+        run: |
+          echo "$EC2_KEY" > ec2_key.pem
+          chmod 600 ec2_key.pem
+          
+          ssh -o StrictHostKeyChecking=no \
+              -o ServerAliveInterval=60 \
+              -o ServerAliveCountMax=10 \
+              -o ConnectTimeout=30 \
+              -i ec2_key.pem $EC2_USER@$EC2_HOST << 'EOF'
+            cd ~/LocateMeAI || exit 1
+            
+            # Check if containers are running
+            if ! docker compose ps | grep -q "Up"; then
+              echo "Containers not running, attempting to start..."
+              docker compose up -d --no-build || docker compose up -d
+            else
+              echo "Containers are running"
+            fi
+            
+            # Verify services
+            docker compose ps
+          EOF
+          
           rm -f ec2_key.pem
 
       - name: Verify Deployment

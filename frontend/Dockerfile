@@ -6,6 +6,7 @@ WORKDIR /app
 # Install system dependencies
 RUN apt-get update && apt-get install -y \
     portaudio19-dev \
+    ffmpeg \
     gcc \
     python3-dev \
     && rm -rf /var/lib/apt/lists/*
