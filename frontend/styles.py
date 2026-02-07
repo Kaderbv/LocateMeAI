@@ -85,7 +85,6 @@ def get_custom_css():
     /* File uploader and audio input inside tab panel - keep white text */
     .stTabs [data-baseweb="tab-panel"] [data-testid="stFileUploader"] label,   
     .stTabs [data-baseweb="tab-panel"] [data-testid="stFileUploader"] span,
-    .stTabs [data-baseweb="tab-panel"] [data-testid="stFileUploader"] div,
     .stTabs [data-baseweb="tab-panel"] [data-testid="stAudioInput"] label,
     .stTabs [data-baseweb="tab-panel"] [data-testid="stAudioInput"] span,
     .stTabs [data-baseweb="tab-panel"] [data-testid="stAudioInput"] div {
@@ -99,7 +98,7 @@ def get_custom_css():
     
     /* Button styling */
     .stButton > button {
-        background-color: #1976d2 !important;
+        background-color: #00274a !important;
         color: white !important;
         border: none !important;
         border-radius: 5px !important;
@@ -108,8 +107,22 @@ def get_custom_css():
     }
     
     .stButton > button:hover {
-        background-color: #1565c0 !important;
+        background-color: #1a3a5c !important;
         border: none !important;
+    }
+
+    .stButton > button p,
+    .stButton > button span,
+    .stButton > button * {
+        color: white !important;
+    }
+    
+    /* Buttons inside tab panels - ensure white text */
+    .stTabs [data-baseweb="tab-panel"] .stButton > button,
+    .stTabs [data-baseweb="tab-panel"] .stButton > button p,
+    .stTabs [data-baseweb="tab-panel"] .stButton > button span,
+    .stTabs [data-baseweb="tab-panel"] .stButton > button * {
+        color: white !important;
     }
     
     /* Text colors */
@@ -137,16 +150,22 @@ def get_custom_css():
         padding: 20px !important;
     }
     
-    [data-testid="stFileUploader"] label {
-        color: white !important;
-    }
+    
     
     [data-testid="stFileUploader"] p,
-    [data-testid="stFileUploader"] span,
-    [data-testid="stFileUploader"] div {
+    [data-testid="stFileUploader"] span{
         color: white !important;
     }
-    
+
+     /* Uploaded file display */
+    [data-testid="stFileUploaderFile"] {
+        color: black !important;
+    }
+
+    [data-testid="stFileUploaderFile"] * {
+        color: black !important;
+    }    
+      
     /* Audio input (voice recorder) */
     [data-testid="stAudioInput"] {
         background-color: rgba(255, 255, 255, 0.05) !important;
