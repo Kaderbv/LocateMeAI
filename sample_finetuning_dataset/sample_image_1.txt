@@ -1,0 +1,12 @@
+# Sample Annotation 1: Single Smartphone on Desk
+# Image description: A smartphone lying flat on a desk, centered in the frame
+# Image dimensions: Assuming standard photo (e.g., 1920x1080 or similar)
+
+# Format: class_id center_x center_y width height
+# class_id: 0 (smartphone)
+# center_x: 0.5 (centered horizontally)
+# center_y: 0.5 (centered vertically)
+# width: 0.25 (smartphone takes up 25% of image width)
+# height: 0.45 (smartphone takes up 45% of image height)
+
+0 0.5 0.5 0.25 0.45

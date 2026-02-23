@@ -5,12 +5,17 @@ from texttospeech import speak
 from user_intent_classify import get_user_intent
 from utils.video_utils import download_video, video_uploader_section
 from general_inquiry import ask_general_query
+from model_utils import display_active_model_info
+from config import BACKEND_URL
 
-BACKEND_EXTRACT_CLASSES_URL = "http://localhost:8000/extract-classes"
-BACKEND_VIDEO_DETECT_URL = "http://localhost:8000/detect-video"
+BACKEND_EXTRACT_CLASSES_URL = f"{BACKEND_URL}/extract-classes"
+BACKEND_VIDEO_DETECT_URL = f"{BACKEND_URL}/detect-video"
 
 def locate_by_video():
     """Handle video detection functionality"""
+    
+    # Display active model info
+    display_active_model_info()
     
     video_file = video_uploader_section()
 

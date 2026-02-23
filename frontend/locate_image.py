@@ -5,10 +5,15 @@ from texttospeech import speak
 from utils.image_utils import draw_bounding_boxes, image_uploader_section
 from user_intent_classify import get_user_intent
 from general_inquiry import ask_general_query
-from config import BACKEND_IMAGE_DETECT_URL, BACKEND_EXTRACT_CLASSES_URL
+from model_utils import display_active_model_info
+from config import BACKEND_IMAGE_DETECT_URL, BACKEND_EXTRACT_CLASSES_URL, BACKEND_URL
 
 def locate_by_image():
     """Handle image detection functionality"""
+    
+    # Display active model info
+    display_active_model_info()
+    
     # -----------------------------
     # UI: Image Uploader
     # -----------------------------

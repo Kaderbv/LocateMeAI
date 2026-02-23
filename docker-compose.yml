@@ -9,8 +9,15 @@ services:
     ports:
       - "8000:8000"
     volumes:
+      # Temporary uploads and outputs
       - ./backend/uploads:/app/uploads
       - ./backend/outputs:/app/outputs
+      # Training runs and results (persistent)
+      - ./backend/runs:/app/runs
+      # Persistent storage for fine-tuned models
+      - backend-models:/app/models
+      # Persistent storage for active model configuration
+      - backend-data:/app/data
     environment:
       - PYTHONUNBUFFERED=1
     env_file:
@@ -60,3 +67,9 @@ networks:
 
 volumes:
   ollama-data:
+  # Persistent volume for fine-tuned YOLO models
+  backend-models:
+    driver: local
+  # Persistent volume for active model configuration and training data
+  backend-data:
+    driver: local

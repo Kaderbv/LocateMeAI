@@ -1,0 +1,12 @@
+# Sample Annotation 2: Keys on a Keyring
+# Image description: A set of keys on a keyring, placed on a table
+# Position: Slightly to the left and in the upper half
+
+# Format: class_id center_x center_y width height
+# class_id: 1 (keys)
+# center_x: 0.35 (left of center)
+# center_y: 0.4 (upper middle area)
+# width: 0.18 (keys are smaller object)
+# height: 0.28 (vertical orientation)
+
+1 0.35 0.4 0.18 0.28

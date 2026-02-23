@@ -1,9 +1,9 @@
 from .yolo_model import YOLOModel
 
 # Initialize without class filter - will create new instances as needed
-def predict_extract_image_detections(file_path, classes=None):
+def predict_extract_image_detections(file_path, classes=None, model_path=None):
     """Run YOLO prediction on image with optional class filtering."""
-    yolo = YOLOModel(classes=classes)
+    yolo = YOLOModel(classes=classes, model_path=model_path)
     result = yolo.predict(file_path)
 
     """Process detections to count unique objects"""
@@ -19,9 +19,9 @@ def predict_extract_image_detections(file_path, classes=None):
     
     return detections
 
-def predict_extract_video_detections(cap, out, classes=None):
+def predict_extract_video_detections(cap, out, classes=None, model_path=None):
     """Process video detections to count unique objects with optional class filtering."""
-    yolo = YOLOModel(classes=classes)
+    yolo = YOLOModel(classes=classes, model_path=model_path)
     output_frame_count = 0
     total_detections = []
     

@@ -1,0 +1,19 @@
+# Sample Annotation 4: Multiple Objects - Smartphone and Keys
+# Image description: Smartphone on the left side, keys on the right side
+# Both objects on a table/desk
+
+# Object 1: Smartphone
+# center_x: 0.3 (left side)
+# center_y: 0.5 (centered vertically)
+# width: 0.22 (standard smartphone width)
+# height: 0.4 (standard smartphone height)
+
+0 0.3 0.5 0.22 0.4
+
+# Object 2: Keys
+# center_x: 0.7 (right side)
+# center_y: 0.55 (slightly lower than smartphone)
+# width: 0.15 (compact keys)
+# height: 0.25 (keys in vertical arrangement)
+
+1 0.7 0.55 0.15 0.25

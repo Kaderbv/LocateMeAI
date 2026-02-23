@@ -1,0 +1,12 @@
+# Sample Annotation 5: Wallet
+# Image description: A wallet (closed) on a surface
+# Position: Centered in frame
+
+# Format: class_id center_x center_y width height
+# class_id: 3 (wallet)
+# center_x: 0.5 (centered horizontally)
+# center_y: 0.5 (centered vertically)
+# width: 0.25 (wallet width)
+# height: 0.35 (wallet height)
+
+3 0.5 0.5 0.25 0.35

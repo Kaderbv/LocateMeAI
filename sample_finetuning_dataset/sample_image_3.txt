@@ -1,0 +1,12 @@
+# Sample Annotation 3: Pair of Glasses
+# Image description: Eyeglasses placed flat on a surface
+# Position: Centered, horizontal orientation
+
+# Format: class_id center_x center_y width height
+# class_id: 2 (glasses)
+# center_x: 0.5 (centered horizontally)
+# center_y: 0.45 (slightly above center)
+# width: 0.35 (glasses are wide)
+# height: 0.12 (glasses are thin/flat)
+
+2 0.5 0.45 0.35 0.12
