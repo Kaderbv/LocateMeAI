@@ -4,6 +4,7 @@ from speechtotext import speechtotext
 from texttospeech import speak
 from locate_image import locate_by_image
 from locate_video import locate_by_video
+from locate_stream import locate_by_stream
 from fine_tuning import fine_tune_model
 from styles import get_custom_css
 import os
@@ -33,13 +34,16 @@ else:
 # -----------------------------
 # UI: Menu Tabs
 # -----------------------------
-locateInImage, locateInVideo, fineTuning = st.tabs(["📷 Locate By Image", "🎥 Locate By Video", "🎯 Fine-tune Model"])
+locateInImage, locateInVideo, locateInStream, fineTuning = st.tabs(["📷 Locate By Image", "🎥 Locate By Video", "🌐 Live Stream", "🎯 Fine-tune Model"])
 
 with locateInImage:
     locate_by_image()
 
 with locateInVideo:
     locate_by_video()
+
+with locateInStream:
+    locate_by_stream()
 
 with fineTuning:
     fine_tune_model()

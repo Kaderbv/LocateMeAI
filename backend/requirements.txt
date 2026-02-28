@@ -6,5 +6,8 @@ python-multipart
 sentence-transformers
 python-dotenv
 PyYAML
+websockets
+opencv-python
+numpy
 torch --index-url https://download.pytorch.org/whl/cpu # lighter version of torch for intent classification
 # torch --index-url https://download.pytorch.org/whl/cu118 # GPU version of torch for intent classification

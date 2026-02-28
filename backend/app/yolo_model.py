@@ -21,10 +21,63 @@ class YOLOModel:
         self.model = YOLO(model_path)
         self.classes = classes
 
-    def predict(self, image_path: str):
-        # Only detect specified classes if provided
+    def predict(self, image_path: str, stream: bool = False, conf: float = 0.25, iou: float = 0.7, verbose: bool = False):
+        """
+        Run YOLO prediction on image or video frame.
+        
+        Args:
+            image_path: Path to image file or numpy array (frame)
+            stream: Use stream mode for better memory efficiency (recommended for video)
+            conf: Confidence threshold for detections (default: 0.25)
+            iou: IoU threshold for NMS (default: 0.7)
+            verbose: Print prediction info
+            
+        Returns:
+            Single result object when stream=False, or generator when stream=True
+        """
+        # Build prediction arguments
+        predict_args = {
+            'conf': conf,
+            'iou': iou,
+            'verbose': verbose,
+            'stream': stream
+        }
+        
+        # Add class filtering if specified
         if self.classes is not None:
-            results = self.model(image_path, classes=self.classes)
+            predict_args['classes'] = self.classes
+        
+        # Run prediction with optimized parameters
+        results = self.model(image_path, **predict_args)
+        
+        # If stream mode, return generator; otherwise return first result
+        if stream:
+            return results  # Returns generator
         else:
-            results = self.model(image_path)
-        return results[0]
+            return results[0]  # Returns single result
+    
+    def predict_stream(self, source, conf: float = 0.25, iou: float = 0.7, verbose: bool = False):
+        """
+        Optimized method for streaming predictions (video/webcam).
+        Uses stream=True by default for better performance.
+        
+        Args:
+            source: Video file path, stream URL, or numpy array
+            conf: Confidence threshold
+            iou: IoU threshold for NMS
+            verbose: Print prediction info
+            
+        Returns:
+            Generator yielding results for each frame
+        """
+        predict_args = {
+            'conf': conf,
+            'iou': iou,
+            'verbose': verbose,
+            'stream': True  # Always use stream mode for this method
+        }
+        
+        if self.classes is not None:
+            predict_args['classes'] = self.classes
+        
+        return self.model(source, **predict_args)

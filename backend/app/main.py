@@ -1,4 +1,4 @@
-from fastapi import FastAPI, UploadFile, File, Form
+from fastapi import FastAPI, UploadFile, File, Form, WebSocket, WebSocketDisconnect
 from fastapi.responses import FileResponse
 from .intent_classifier import classify_intent
 from .utils import predict_extract_image_detections, predict_extract_video_detections
@@ -10,6 +10,10 @@ import cv2
 from pathlib import Path
 from .ollma_llm import pull_model, query_llm, extract_classes_from_command
 from .config import OLLAMA_MODEL_NAME
+from .yolo_model import YOLOModel
+import json
+import base64
+import numpy as np
 # Load environment variables from .env file
 
 
@@ -333,3 +337,118 @@ async def set_current_active_model(model_path: str = Form(...)):
         }
     except Exception as e:
         return {"error": f"Failed to set active model: {str(e)}"}
+
+@app.websocket("/ws/stream-detect")
+async def websocket_stream_detect(websocket: WebSocket):
+    """
+    WebSocket endpoint for real-time video stream detection.
+    
+    Protocol:
+    Client sends: JSON with {"frame": "base64_encoded_image", "classes": "0,1,2" (optional)}
+    Server responds: JSON with {"detections": [...], "frame_count": N}
+    """
+    await websocket.accept()
+    
+    # Initialize model once for this connection
+    yolo_model = None
+    frame_count = 0
+    
+    try:
+        while True:
+            # Receive data from client
+            data = await websocket.receive_text()
+            message = json.loads(data)
+            
+            # Extract frame and classes
+            frame_b64 = message.get("frame")
+            classes_str = message.get("classes", "")
+            
+            if not frame_b64:
+                await websocket.send_json({"error": "No frame provided"})
+                continue
+            
+            # Decode base64 image
+            try:
+                img_bytes = base64.b64decode(frame_b64)
+                nparr = np.frombuffer(img_bytes, np.uint8)
+                frame = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
+                
+                if frame is None:
+                    await websocket.send_json({"error": "Failed to decode frame"})
+                    continue
+            except Exception as e:
+                await websocket.send_json({"error": f"Frame decode error: {str(e)}"})
+                continue
+            
+            # Parse classes
+            class_list = None
+            if classes_str:
+                try:
+                    class_list = [int(c.strip()) for c in classes_str.split(',')]
+                    print(f"Filtering by classes: {class_list}")  # Debug log
+                except ValueError as e:
+                    print(f"Error parsing classes '{classes_str}': {e}")
+                    pass
+            else:
+                print("Detecting all classes")  # Debug log
+            
+            # Get confidence threshold from message (default: 0.25)
+            conf_threshold = message.get("conf", 0.25)
+            
+            # Initialize model if not already done or if classes changed
+            # Compare as strings to handle None vs list comparison properly
+            current_classes = str(yolo_model.classes) if yolo_model else None
+            new_classes = str(class_list)
+            
+            if yolo_model is None or current_classes != new_classes:
+                print(f"Reinitializing model: {current_classes} -> {new_classes}")  # Debug log
+                active_model = get_active_model()
+                yolo_model = YOLOModel(classes=class_list, model_path=active_model)
+            
+            # Run detection
+            try:
+                # Predict directly on numpy array (no need to save to file)
+                # This is much faster than saving and loading from disk
+                print(f"Running prediction with classes: {yolo_model.classes}, conf: {conf_threshold}")  # Debug log
+                result = yolo_model.predict(frame, stream=False, conf=conf_threshold, verbose=False)
+                
+                # Extract detections
+                detections = []
+                for box in result.boxes:
+                    x1, y1, x2, y2 = map(int, box.xyxy[0].tolist())
+                    cls = int(box.cls[0])
+                    label = result.names[cls]
+                    conf = float(box.conf[0])
+                    
+                    print(f"Detection: {label} (class {cls}) - confidence {conf:.2f}")  # Debug log
+                    
+                    detections.append({
+                        "bbox": [x1, y1, x2, y2],
+                        "class_name": label,
+                        "class_id": cls,
+                        "confidence": conf
+                    })
+                
+                frame_count += 1
+                
+                # Send response
+                await websocket.send_json({
+                    "detections": detections,
+                    "frame_count": frame_count,
+                    "status": "success"
+                })
+                
+            except Exception as e:
+                await websocket.send_json({
+                    "error": f"Detection error: {str(e)}",
+                    "status": "error"
+                })
+    
+    except WebSocketDisconnect:
+        print(f"WebSocket disconnected. Processed {frame_count} frames.")
+    except Exception as e:
+        print(f"WebSocket error: {str(e)}")
+        try:
+            await websocket.send_json({"error": f"Server error: {str(e)}"})
+        except:
+            pass
