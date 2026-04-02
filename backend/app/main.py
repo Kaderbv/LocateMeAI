@@ -180,6 +180,8 @@ async def download_video(filename: str):
 async def classify_intent_endpoint(text: str):
     """Classify user intent from text"""    
     intent = classify_intent(text)
+    logging_info = f"Classified intent: '{intent}' for input text: '{text}'"
+    print(logging_info)  # Log to console for now
     return {"intent": intent}
 
 @app.post("/extract-classes")
