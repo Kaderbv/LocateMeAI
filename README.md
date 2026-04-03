@@ -7,6 +7,17 @@ A Voice-based virtual assistant integrating AI-powered vision, transforming how 
 Click the below icon to watch a demo on how to use this repo
 
 [![LocateMeAI Demo Video](image.png)](https://youtu.be/X5qMQuHT3nU)
+
+## Login Credentials
+Add a lightweight username/password gate for a small set of users
+
+ - Username : alice
+  
+    Password : password123
+
+  - Username : bob
+     
+    Password : password456
 ## 🎯 Project Overview
 
 LocateMe AI is a voice-assisted object detection application that uses YOLOv8 to identify objects in uploaded images. Users can interact with the system through voice commands, making it accessible and intuitive.
@@ -28,6 +39,7 @@ LocateMe AI is a voice-assisted object detection application that uses YOLOv8 to
 - 📊 **Detection Statistics**: Comprehensive summary with object names, class IDs, and frame numbers
 - 📥 **Download Results**: Download processed videos with bounding boxes
 - 🎨 **Modern UI**: Clean Streamlit interface with custom styling
+- 🔐 **Optional Frontend Login**: Add a lightweight username/password gate for a small set of users
 - 🐳 **Docker Support**: Easy deployment with Docker Compose
 
 ## 🏗️ Architecture
@@ -173,6 +185,7 @@ LocateMeAI/
 4. **Set up the backend**
    ```bash
    cd backend
+   python -m venv venv // (optional / for the first time) 
    .\venv\Scripts\activate
    pip install -r requirements.txt
    uvicorn app.main:app --reload
@@ -181,10 +194,27 @@ LocateMeAI/
 5. **Set up the frontend**
    ```bash
    cd ../frontend
+   python -m venv venv // (optional / for the first time)
    .\venv\Scripts\activate
    pip install -r requirements.txt
    .\venv\Scripts\python.exe -m streamlit run app.py
    ```
+
+#### Optional: Enable simple frontend authentication
+
+If you only need to protect the Streamlit UI for a few known users, you can enable the built-in lightweight login gate.
+
+Add these variables in `frontend/.env.local` for local development or `frontend/.env` for Docker:
+
+```env
+FRONTEND_AUTH_ENABLED=true
+FRONTEND_AUTH_USERS=alice:change-me,bob:change-me-too
+```
+
+Notes:
+- This is intended for a small fixed user list.
+- Passwords are stored in environment variables, so this is best for internal or low-risk deployments.
+- For public internet exposure, prefer a proper identity provider or reverse-proxy auth.
 
 #### Option 2: Docker Setup (Recommended for Production)
 
@@ -195,6 +225,7 @@ See the [Docker Deployment](#-docker-deployment) section below.
 1. **Start the backend server**
    ```bash
    cd backend
+   python -m venv venv // (optional / for the first time)
    .\venv\Scripts\activate
    pip install -r requirements.txt
    uvicorn app.main:app --reload
@@ -204,6 +235,7 @@ See the [Docker Deployment](#-docker-deployment) section below.
 2. **Start the frontend** (in a new terminal)
    ```bash
    cd frontend
+   python -m venv venv // (optional / for the first time)
    .\venv\Scripts\activate
    pip install -r requirements.txt
    .\venv\Scripts\python.exe -m streamlit run app.py
