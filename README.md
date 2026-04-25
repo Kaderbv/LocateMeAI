@@ -705,10 +705,6 @@ See [DEPLOYMENT.md](DEPLOYMENT.md) for detailed production deployment guide.
 - Location history tracking
 - Cloud deployment
 
-## 👥 Contributors
-
-Capstone Project - Uplevel Program
-
 ## 📄 License
 
 This project is for educational purposes.
