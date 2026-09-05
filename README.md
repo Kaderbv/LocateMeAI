@@ -6,7 +6,7 @@ A Voice-based virtual assistant integrating AI-powered vision, transforming how 
 
 Click the below icon to watch a demo on how to use this repo
 
-[![LocateMeAI Demo Video](image.png)](https://youtu.be/ajYJBCN4RpA)
+[![LocateMeAI Demo Video](LocateMeAI.jpg)](https://youtu.be/C4aFTRYnjs0)
 
 ## Login Credentials
 Add a lightweight username/password gate for a small set of users
